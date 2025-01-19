@@ -1,0 +1,32 @@
+import { Response } from "express";
+import { Request } from "express-jwt";
+import { CustomerService } from "./customerService";
+import { Logger } from "winston";
+
+export class CustomerController {
+  constructor(
+    private CustomerService: CustomerService,
+    private Logger: Logger,
+  ) {}
+  getCustomer = async (req: Request, res: Response) => {
+    // todo : add these fields to jwt in auth service
+    const { sub: userId, firstName, lastName, email, tenant } = req.auth;
+
+    console.log(req.auth);
+    const customer = await this.CustomerService.getCustomer(userId);
+
+    if (!customer) {
+      const newCustomer = await this.CustomerService.createCustomer({
+        userId,
+        firstName,
+        lastName,
+        email,
+        address: [],
+      });
+      // Todo : add logging
+      this.Logger.info("Customer created");
+      return res.json(newCustomer);
+    }
+    res.json(customer);
+  };
+}
