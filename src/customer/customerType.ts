@@ -9,7 +9,7 @@ export interface CustomerModel {
   lastName: string;
   email: string;
   // tenantId: string;
-  address: Address[];
+  addresses: Address[];
 }
 
 export interface Customer extends CustomerModel {

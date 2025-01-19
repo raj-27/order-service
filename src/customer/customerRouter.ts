@@ -8,6 +8,13 @@ const router = express.Router();
 
 const customerService = new CustomerService();
 const customerController = new CustomerController(customerService, logger);
-router.use("/", authenticate, asyncWrapper(customerController.getCustomer));
+
+router.get("/", authenticate, asyncWrapper(customerController.getCustomer));
+
+router.patch(
+  "/addresses/:id",
+  authenticate,
+  asyncWrapper(customerController.addAddress),
+);
 
 export default router;

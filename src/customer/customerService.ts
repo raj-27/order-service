@@ -9,4 +9,24 @@ export class CustomerService {
   async createCustomer(customer: CustomerModel) {
     return await customerModel.create(customer);
   }
+
+  async addAddress(id: string, userId: string, address: string) {
+    // return await customerModel.updateOne({ userId: "123" },
+    return await customerModel.findOneAndUpdate(
+      {
+        _id: id,
+        userId,
+      },
+      {
+        $push: {
+          addresses: {
+            text: address,
+            // todo : implement isDefault field in future
+            default: false,
+          },
+        },
+      },
+      { new: true },
+    );
+  }
 }
