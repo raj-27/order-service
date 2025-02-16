@@ -50,8 +50,12 @@ export class CouponController {
 
     console.log({ coupon });
     if (!coupon) {
-      const error = createHttpError(400, "Coupon does not exists");
-      return next(error);
+      // const error = createHttpError(400, "Coupon does not exists");
+      // return next(error);
+      return res.json({
+        valid: false,
+        discount: 0,
+      });
     }
 
     // Validate Expiry

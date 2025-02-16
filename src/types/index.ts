@@ -1,4 +1,5 @@
 import { Request } from "express";
+import mongoose from "mongoose";
 
 export type AuthCookie = {
   accessToken: string;
@@ -34,4 +35,11 @@ export interface ProductPricingCache {
 export interface ProductMessage {
   id: string;
   priceConfiguration: PriceConfiguration;
+}
+
+export interface ToppingPriceCache {
+  _id: mongoose.Types.ObjectId;
+  toppingId: string;
+  price: number;
+  tenantId: string;
 }

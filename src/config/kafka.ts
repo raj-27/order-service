@@ -1,6 +1,7 @@
 import { Consumer, EachMessagePayload, Kafka } from "kafkajs";
 import { MessageBroker } from "../types/broker";
 import { handleProductUpdate } from "../productCache/productUpdateHandler";
+import { handleToppingUpdate } from "../toppingCache/toppingUpdateHandler";
 
 export class KafkaBroker implements MessageBroker {
   private cosumer: Consumer;
@@ -40,6 +41,8 @@ export class KafkaBroker implements MessageBroker {
           case "product":
             await handleProductUpdate(message.value.toString());
             break;
+          case "topping":
+            await handleToppingUpdate(message.value.toString());
           default:
             console.log("Doing Nothing");
             break;
