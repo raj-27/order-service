@@ -5,3 +5,5 @@ auth:
   jwksUri: http://localhost:5501/.well-known/jwks.json
 database:
   url: mongodb+srv://raj-27:AjEkjjxcIHSIRSsV@cluster0.fuksv.mongodb.net/order-db
+kafka:
+  broker: localhost:9092

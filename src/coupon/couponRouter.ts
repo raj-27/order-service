@@ -19,6 +19,8 @@ router.post(
   asyncWrapper(couponControler.createCuopon),
 );
 
+router.post("/verify", asyncWrapper(couponControler.verify));
+
 router.get(
   "/",
   authenticate,

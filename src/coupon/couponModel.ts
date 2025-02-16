@@ -27,4 +27,6 @@ const couponSchema = new mongoose.Schema<Coupon>(
   { timestamps: true },
 );
 
+// create index for fast lookup
+couponSchema.index({ tenantId: 1, code: 1 }, { unique: true });
 export default mongoose.model("coupon", couponSchema);

@@ -26,6 +26,10 @@ export class CouponService {
     );
   };
 
+  getCouponByCodeAndTenant = async (code: string, tenantId: string) => {
+    return await couponModel.findOne({ code: code, tenantId: tenantId });
+  };
+
   deleteCoupon = async (id: string) => {
     await couponModel.findOneAndDelete({ _id: id });
   };

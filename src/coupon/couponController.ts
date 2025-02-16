@@ -1,10 +1,11 @@
-import { Response } from "express";
+import { NextFunction, Response } from "express";
 import { Request } from "express-jwt";
 import { CouponService } from "./couponService";
 import { Coupon } from "./couponType";
 import { Roles } from "../constant";
 import { AuthRequest } from "../types";
 import { Logger } from "winston";
+import createHttpError from "http-errors";
 
 export class CouponController {
   constructor(
@@ -12,16 +13,21 @@ export class CouponController {
     private logger: Logger,
   ) {}
 
-  createCuopon = async (req: Request, res: Response) => {
+  createCuopon = async (req: Request, res: Response, next: NextFunction) => {
     const { title, code, discount, validUpto, tenantId } = req.body as Coupon;
     const { tenant, role } = req.auth;
 
     if (role !== Roles.ADMIN && tenant !== tenantId) {
-      throw new Error("You are allowed to perform this action");
+      const error = createHttpError(
+        403,
+        "You are not authorised to perform this action",
+      );
+      return next(error);
     }
     const existingCoupon = await this.couponService.getCoupon(code);
     if (existingCoupon) {
-      throw new Error(`Coupon code ${code} already exist`);
+      const error = createHttpError(403, "Coupon Already Exist");
+      return next(error);
     }
     const Coupon = await this.couponService.createCoupon({
       title,
@@ -33,23 +39,54 @@ export class CouponController {
     res.json(Coupon);
   };
 
+  verify = async (req: Request, res: Response, next: NextFunction) => {
+    const { code, tenantId } = req.body;
+    console.log({ code, tenantId });
+    // Todo: request validation
+    const coupon = await this.couponService.getCouponByCodeAndTenant(
+      code,
+      tenantId,
+    );
+
+    console.log({ coupon });
+    if (!coupon) {
+      const error = createHttpError(400, "Coupon does not exists");
+      return next(error);
+    }
+
+    // Validate Expiry
+    const currentDate = new Date();
+    const couponDate = new Date(coupon.validUpto);
+
+    if (couponDate >= currentDate) {
+      return res.json({
+        valid: true,
+        discount: coupon.discount,
+      });
+    }
+    return res.json({ valid: false, discount: 0 });
+  };
+
   getCoupons = async (req: Request, res: Response) => {
     const coupons = await this.couponService.getCoupons({});
     return res.json(coupons);
   };
 
-  updateCoupon = async (req: Request, res: Response) => {
+  updateCoupon = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
 
     const existingCoupon = await this.couponService.getCouponById(id);
     if (!existingCoupon) {
-      throw new Error("Coupon not found.");
+      const error = createHttpError(403, "Coupon not found");
+      return next(error);
     }
 
     if ((req as AuthRequest).auth.role !== Roles.ADMIN) {
       const _tenantId = (req as AuthRequest).auth.tenant;
       if (existingCoupon.tenantId !== _tenantId) {
-        throw new Error("You're are not allowed to do this action.");
+        return next(
+          createHttpError(403, "You're are not allowed to do this action."),
+        );
       }
     }
 
@@ -59,7 +96,7 @@ export class CouponController {
     res.json(updatedCoupon);
   };
 
-  deleteCoupon = async (req: Request, res: Response) => {
+  deleteCoupon = async (req: Request, res: Response, next: NextFunction) => {
     // 1st get id of the coupon
     const { id } = req.params;
     // with id check that particular coupon exist?
@@ -68,10 +105,12 @@ export class CouponController {
       throw new Error("Coupon not found");
     }
 
-    if ((req as AuthRequest).auth.role != Roles.ADMIN) {
+    if ((req as AuthRequest).auth.role !== Roles.ADMIN) {
       const _tenantId = (req as AuthRequest).auth.tenant;
       if (coupon.tenantId !== _tenantId) {
-        throw new Error("You are not allowed to perform this action.");
+        return next(
+          createHttpError(403, "You're are not allowed to do this action."),
+        );
       }
     }
     // if exist then delete it
