@@ -18,3 +18,20 @@ export interface AuthRequest extends Request {
     iss: string; // Issuer of the token
   };
 }
+
+export interface PriceConfiguration {
+  priceType: "base" | "aditional";
+  availabelOptions: {
+    [key: string]: number;
+  };
+}
+
+export interface ProductPricingCache {
+  productId: string;
+  priceConfiguration: PriceConfiguration;
+}
+
+export interface ProductMessage {
+  id: string;
+  priceConfiguration: PriceConfiguration;
+}
