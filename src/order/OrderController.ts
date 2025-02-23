@@ -27,7 +27,11 @@ export class OrderController {
       );
     }
     const discountAmount = Math.round((totalPrice * discountPercentage) / 100);
-    res.json({ discountAmount });
+    const priceAfterDiscount = totalPrice - discountAmount;
+    // Todo : May be store in db for each tenant
+    const TAX_PERCENT = 18;
+    const taxes = Math.round(priceAfterDiscount * TAX_PERCENT) / 100;
+    res.json({ taxes });
   };
 
   private calculateTotal = async (cart: CartItem[]) => {
