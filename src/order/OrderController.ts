@@ -6,20 +6,33 @@ import {
   Topping,
   ToppingPriceCache,
 } from "../types";
-import productCaheModel from "../productCache/productCaheModel";
-import toppingCacheModel from "../toppingCache/toppingCacheModel";
 import createHttpError from "http-errors";
-import couponModel from "../coupon/couponModel";
+import { Logger } from "winston";
+import { ProductCacheService } from "../productCache/productCacheService";
+import { OrderService } from "./orderService";
+import { Order, OrderStatus, PaymentStatus } from "./orderTypes";
 
 export class OrderController {
+  constructor(
+    private ProductCacheService: ProductCacheService,
+    private OrderService: OrderService,
+    private logger: Logger,
+  ) {}
   create = async (req: Request, res: Response) => {
     // todo : validate request data
-    const totalPrice = await this.calculateTotal(req.body.cart);
+    const {
+      cart,
+      couponCode,
+      tenantId,
+      paymentMode,
+      customerId,
+      comment,
+      address,
+    } = req.body;
+    const totalPrice = await this.calculateTotal(cart);
 
     // Calculating discount
     let discountPercentage = 0;
-    const couponCode = req.body.couponCode;
-    const tenantId = req.body.tenantId;
     if (couponCode) {
       discountPercentage = await this.getDiscountPercentage(
         couponCode,
@@ -34,26 +47,38 @@ export class OrderController {
     // Todo: maybe store in database for each tenant or maybe calculated according to buisness rule
     const DELIVERY_CHARGES = 50;
     const finalTotal = priceAfterDiscount + taxes + DELIVERY_CHARGES;
-    res.json({ finalTotal });
+    // Todo : prooblems...
+    // create and order
+    const newOrder = await this.OrderService.createOrder({
+      cart,
+      customerId,
+      tenantId,
+      address,
+      deliveryCharegs: DELIVERY_CHARGES,
+      discount: discountAmount,
+      taxes,
+      totalAmount: finalTotal,
+      paymentMode,
+      orderStatus: OrderStatus.RECIEVED,
+      paymentStatus: PaymentStatus.PENDING,
+      comment,
+    });
+    res.json({ newOrder });
   };
 
   private calculateTotal = async (cart: CartItem[]) => {
     const productIds = cart.map((item) => item._id);
     // Todo : proper error handling
-    const productPricings = await productCaheModel.find({
-      productId: {
-        $in: productIds,
-      },
-    });
+    const productPricings =
+      await this.ProductCacheService.getProductPricing(productIds);
 
     const cartToppingIds = cart.flatMap((item) =>
       item.chosenConfiguration.selectedToppings.map((topping) => topping.id),
     );
 
     // Todo : What will happen if topping does not exists in the cache
-    const toppingPricings = await toppingCacheModel.find({
-      toppingId: { $in: cartToppingIds },
-    });
+    const toppingPricings =
+      await this.ProductCacheService.getToppingPricings(cartToppingIds);
     const totalPrice = cart.reduce((acc, curr) => {
       const cachedProductPrice = productPricings.find(
         (product) => product.productId === curr._id,
@@ -99,7 +124,7 @@ export class OrderController {
     toppingPricing: ToppingPriceCache[],
   ): number => {
     const currentTopping = toppingPricing.find(
-      (current) => topping.id === current.toppingId,
+      (current) => String(topping.id) === current.toppingId,
     );
     if (!currentTopping) {
       // Todo : Make sure the item is in the cache else, maybe call catalog service
@@ -113,10 +138,10 @@ export class OrderController {
     tenantId: string,
   ) => {
     try {
-      const code = await couponModel.findOne({
-        code: couponCode,
-        tenantId: tenantId,
-      });
+      const code = await this.ProductCacheService.getCouponCode(
+        couponCode,
+        tenantId,
+      );
       if (!code) {
         return 0;
       }

@@ -1,5 +1,5 @@
 import { Request } from "express";
-import mongoose from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 export type AuthCookie = {
   accessToken: string;
@@ -62,7 +62,7 @@ export type Product = {
 };
 
 export type Topping = {
-  id: string;
+  id: Schema.Types.ObjectId;
   name: string;
   price: string;
   image: string;
