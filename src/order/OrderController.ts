@@ -1,4 +1,4 @@
-import { Response } from "express";
+import { NextFunction, Response } from "express";
 import { Request } from "express-jwt";
 import {
   CartItem,
@@ -11,14 +11,18 @@ import { Logger } from "winston";
 import { ProductCacheService } from "../productCache/productCacheService";
 import { OrderService } from "./orderService";
 import { Order, OrderStatus, PaymentStatus } from "./orderTypes";
+import { IdempotencyServic } from "../idempotency/idempotencyService";
+import mongoose from "mongoose";
+import config from "config";
 
 export class OrderController {
   constructor(
     private ProductCacheService: ProductCacheService,
     private OrderService: OrderService,
+    private IdempotencyService: IdempotencyServic,
     private logger: Logger,
   ) {}
-  create = async (req: Request, res: Response) => {
+  create = async (req: Request, res: Response, next: NextFunction) => {
     // todo : validate request data
     const {
       cart,
@@ -29,6 +33,7 @@ export class OrderController {
       comment,
       address,
     } = req.body;
+    console.log("cart", cart[0].chosenConfiguration.selectedToppings[0]._id);
     const totalPrice = await this.calculateTotal(cart);
 
     // Calculating discount
@@ -47,22 +52,47 @@ export class OrderController {
     // Todo: maybe store in database for each tenant or maybe calculated according to buisness rule
     const DELIVERY_CHARGES = 50;
     const finalTotal = priceAfterDiscount + taxes + DELIVERY_CHARGES;
-    // Todo : prooblems...
-    // create and order
-    const newOrder = await this.OrderService.createOrder({
-      cart,
-      customerId,
-      tenantId,
-      address,
-      deliveryCharegs: DELIVERY_CHARGES,
-      discount: discountAmount,
-      taxes,
-      totalAmount: finalTotal,
-      paymentMode,
-      orderStatus: OrderStatus.RECIEVED,
-      paymentStatus: PaymentStatus.PENDING,
-      comment,
-    });
+    const idempotencyKey = req.headers["idempotency-key"];
+    const idempotency =
+      await this.IdempotencyService.getIdempotency(idempotencyKey);
+    let newOrder = idempotency ? [idempotency.response] : [];
+    if (!idempotency) {
+      const session = await mongoose.startSession();
+      await session.startTransaction();
+      try {
+        newOrder = await this.OrderService.createOrder(
+          {
+            cart,
+            customerId,
+            tenantId,
+            address,
+            deliveryCharges: DELIVERY_CHARGES,
+            discount: discountAmount,
+            taxes,
+            totalAmount: finalTotal,
+            paymentMode,
+            orderStatus: OrderStatus.RECIEVED,
+            paymentStatus: PaymentStatus.PENDING,
+            comment,
+          },
+          session,
+        );
+        await this.IdempotencyService.createIdempotency(
+          { key: idempotencyKey, response: newOrder[0] },
+          session,
+        );
+        await session.commitTransaction();
+      } catch (error) {
+        await session.abortTransaction();
+        await session.endSession();
+        return next(createHttpError(500, error.message));
+      } finally {
+        await session.endSession();
+      }
+    }
+
+    // Payment Processing
+
     res.json({ newOrder });
   };
 
@@ -72,10 +102,22 @@ export class OrderController {
     const productPricings =
       await this.ProductCacheService.getProductPricing(productIds);
 
-    const cartToppingIds = cart.flatMap((item) =>
-      item.chosenConfiguration.selectedToppings.map((topping) => topping.id),
-    );
+    let cartToppingIds;
+    try {
+      cartToppingIds = cart.reduce((acc, item) => {
+        console.log({ acc, item });
+        return [
+          ...acc,
+          ...item.chosenConfiguration.selectedToppings.map(
+            (topping) => topping._id, // 🔹 Fix: `_id` instead of `id`
+          ),
+        ];
+      }, []);
+    } catch (error) {
+      console.log("Error", error);
+    }
 
+    console.log({ cartToppingIds });
     // Todo : What will happen if topping does not exists in the cache
     const toppingPricings =
       await this.ProductCacheService.getToppingPricings(cartToppingIds);
@@ -103,10 +145,13 @@ export class OrderController {
       0,
     );
 
+    console.log(item.chosenConfiguration.priceConfiguration);
+
     const productTotal = Object.entries(
       item.chosenConfiguration.priceConfiguration,
     ).reduce((acc, [key, value]) => {
       try {
+        console.log(cachedProductPrice.priceConfiguration[key]);
         const price =
           cachedProductPrice.priceConfiguration[key].availableOptions[value];
         return acc + price;
@@ -124,7 +169,7 @@ export class OrderController {
     toppingPricing: ToppingPriceCache[],
   ): number => {
     const currentTopping = toppingPricing.find(
-      (current) => String(topping.id) === current.toppingId,
+      (current) => String(topping._id) === current.toppingId,
     );
     if (!currentTopping) {
       // Todo : Make sure the item is in the cache else, maybe call catalog service

@@ -62,7 +62,7 @@ export type Product = {
 };
 
 export type Topping = {
-  id: Schema.Types.ObjectId;
+  _id: Schema.Types.ObjectId | string;
   name: string;
   price: string;
   image: string;

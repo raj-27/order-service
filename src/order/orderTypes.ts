@@ -27,7 +27,7 @@ export interface Order {
   totalAmount: number;
   discount: number;
   taxes: number;
-  deliveryCharegs: number;
+  deliveryCharges: number;
   address: string;
   tenantId: number | string;
   comment?: string;

@@ -10,9 +10,7 @@ export class ProductCacheService {
     return await productCaheModel.find({ productId: { $in: productId } });
   };
 
-  getToppingPricings = async (
-    cartToppingIds: mongoose.Schema.Types.ObjectId[],
-  ) => {
+  getToppingPricings = async (cartToppingIds: any) => {
     return await toppingCacheModel.find({
       toppingId: { $in: cartToppingIds },
     });

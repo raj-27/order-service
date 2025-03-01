@@ -3,7 +3,7 @@ import { Order, OrderStatus, PaymentMode, PaymentStatus } from "./orderTypes";
 import { CartItem, Topping } from "../types";
 
 const ToppingSchema = new mongoose.Schema<Topping>({
-  id: {
+  _id: {
     type: Schema.Types.ObjectId,
     required: true,
   },
@@ -62,7 +62,7 @@ const orderSchema = new mongoose.Schema<Order>(
     totalAmount: { type: Number, required: true },
     discount: { type: Number, required: true },
     taxes: { type: Number, required: true },
-    deliveryCharegs: { type: Number, required: true },
+    deliveryCharges: { type: Number, required: true },
     address: { type: String, required: true },
     tenantId: { type: String, required: true },
     comment: { type: String, required: false, default: null },
