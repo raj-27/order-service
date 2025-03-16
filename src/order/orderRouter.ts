@@ -6,16 +6,19 @@ import { ProductCacheService } from "../productCache/productCacheService";
 import logger from "../config/logger";
 import { OrderService } from "./orderService";
 import { IdempotencyServic } from "../idempotency/idempotencyService";
+import { RazorPayGateway } from "../payment/razorpay";
 const router = express.Router();
 
 const productCacheService = new ProductCacheService();
 const orderService = new OrderService();
 const idempotencyService = new IdempotencyServic();
+const paymentGateway = new RazorPayGateway();
 const orderController = new OrderController(
   productCacheService,
   orderService,
   idempotencyService,
   logger,
+  paymentGateway,
 );
 
 router.post("/", authenticate, asyncWrapper(orderController.create));

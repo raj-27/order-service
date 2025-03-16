@@ -10,10 +10,10 @@ import createHttpError from "http-errors";
 import { Logger } from "winston";
 import { ProductCacheService } from "../productCache/productCacheService";
 import { OrderService } from "./orderService";
-import { Order, OrderStatus, PaymentStatus } from "./orderTypes";
+import { OrderStatus, PaymentStatus } from "./orderTypes";
 import { IdempotencyServic } from "../idempotency/idempotencyService";
 import mongoose from "mongoose";
-import config from "config";
+import { PaymentFlow } from "../payment/paymentTypes";
 
 export class OrderController {
   constructor(
@@ -21,6 +21,7 @@ export class OrderController {
     private OrderService: OrderService,
     private IdempotencyService: IdempotencyServic,
     private logger: Logger,
+    private PaymentGateWay: PaymentFlow,
   ) {}
   create = async (req: Request, res: Response, next: NextFunction) => {
     // todo : validate request data
@@ -89,11 +90,35 @@ export class OrderController {
       } finally {
         await session.endSession();
       }
+    } else {
+      return next(
+        createHttpError(
+          500,
+          `Idempotency key is already present ${idempotencyKey}`,
+        ),
+      );
     }
 
     // Payment Processing
-
-    res.json({ newOrder });
+    try {
+      const session = await this.PaymentGateWay.createSession({
+        amount: finalTotal,
+        orderId: newOrder[0]._id.toString(),
+        tenantId: tenantId,
+        currency: "INR",
+        idempotentKey: idempotencyKey as string,
+      });
+      this.logger.info(session);
+      // Todo : Update order document => paymentID => sessionId
+      res.json({ paymentUrl: session.paymentUrl });
+    } catch (error) {
+      return next(
+        createHttpError(
+          500,
+          "Error occur while making payment request,please retry",
+        ),
+      );
+    }
   };
 
   private calculateTotal = async (cart: CartItem[]) => {
