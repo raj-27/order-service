@@ -25,8 +25,10 @@ export class RazorPayGateway implements PaymentFlow {
         currency: options.currency,
         accept_partial: false,
         description: ApplicationConstant.PizzaDeliveryPaymentDescription,
+        // Todo : Capture structure address from customer
         customer: {
-          name: "Gaurav Kumar",
+          name: options.customerName,
+          email: options.customerEmail,
         },
         notify: {
           sms: false,
@@ -37,8 +39,9 @@ export class RazorPayGateway implements PaymentFlow {
           orderId: options.orderId,
           tenantId: options.tenantId,
           idempotencyKey: options.idempotentKey,
+          customerId: options.customerId,
         },
-        callback_url: "https://www.iprep.ai/",
+        callback_url: `${config.get("client.url")}/payment`,
         callback_method: "get",
       };
       const session = await this.razorpay.paymentLink.create(Options);

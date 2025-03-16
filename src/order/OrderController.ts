@@ -14,6 +14,7 @@ import { OrderStatus, PaymentStatus } from "./orderTypes";
 import { IdempotencyServic } from "../idempotency/idempotencyService";
 import mongoose from "mongoose";
 import { PaymentFlow } from "../payment/paymentTypes";
+import { CustomerService } from "../customer/customerService";
 
 export class OrderController {
   constructor(
@@ -22,6 +23,7 @@ export class OrderController {
     private IdempotencyService: IdempotencyServic,
     private logger: Logger,
     private PaymentGateWay: PaymentFlow,
+    private CustomerService: CustomerService,
   ) {}
   create = async (req: Request, res: Response, next: NextFunction) => {
     // todo : validate request data
@@ -34,7 +36,6 @@ export class OrderController {
       comment,
       address,
     } = req.body;
-    console.log("cart", cart[0].chosenConfiguration.selectedToppings[0]._id);
     const totalPrice = await this.calculateTotal(cart);
 
     // Calculating discount
@@ -100,6 +101,8 @@ export class OrderController {
     }
 
     // Payment Processing
+    const customerDetails =
+      await this.CustomerService.getCustomerById(customerId);
     try {
       const session = await this.PaymentGateWay.createSession({
         amount: finalTotal,
@@ -107,17 +110,23 @@ export class OrderController {
         tenantId: tenantId,
         currency: "INR",
         idempotentKey: idempotencyKey as string,
+        customerId: customerDetails.id,
+        customerEmail: customerDetails.email,
+        customerName: `${customerDetails.firstName} ${customerDetails.lastName}`,
       });
       this.logger.info(session);
       // Todo : Update order document => paymentID => sessionId
       res.json({ paymentUrl: session.paymentUrl });
     } catch (error) {
-      return next(
-        createHttpError(
-          500,
-          "Error occur while making payment request,please retry",
-        ),
-      );
+      if (error instanceof Error) {
+        this.logger.warn(error.message);
+        return next(
+          createHttpError(
+            500,
+            `Error occur while making payment request: ${error.message}`,
+          ),
+        );
+      }
     }
   };
 
@@ -130,7 +139,6 @@ export class OrderController {
     let cartToppingIds;
     try {
       cartToppingIds = cart.reduce((acc, item) => {
-        console.log({ acc, item });
         return [
           ...acc,
           ...item.chosenConfiguration.selectedToppings.map(
@@ -142,7 +150,6 @@ export class OrderController {
       console.log("Error", error);
     }
 
-    console.log({ cartToppingIds });
     // Todo : What will happen if topping does not exists in the cache
     const toppingPricings =
       await this.ProductCacheService.getToppingPricings(cartToppingIds);
@@ -170,13 +177,10 @@ export class OrderController {
       0,
     );
 
-    console.log(item.chosenConfiguration.priceConfiguration);
-
     const productTotal = Object.entries(
       item.chosenConfiguration.priceConfiguration,
     ).reduce((acc, [key, value]) => {
       try {
-        console.log(cachedProductPrice.priceConfiguration[key]);
         const price =
           cachedProductPrice.priceConfiguration[key].availableOptions[value];
         return acc + price;

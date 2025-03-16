@@ -14,6 +14,9 @@ export interface PaymentOptions {
   orderId: string;
   tenantId: string;
   idempotentKey?: string;
+  customerId: string;
+  customerEmail: string;
+  customerName: string;
 }
 type GatewayPaymentStatus =
   | "no_payment_required"

@@ -13,7 +13,6 @@ export class CustomerController {
   getCustomer = async (req: Request, res: Response) => {
     // todo : add these fields to jwt in auth service
     const { sub: userId, firstName, lastName, email } = req.auth;
-
     console.log(req.auth);
     const customer = await this.CustomerService.getCustomer(userId);
 
