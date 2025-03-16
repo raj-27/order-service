@@ -10,7 +10,7 @@ import createHttpError from "http-errors";
 import { Logger } from "winston";
 import { ProductCacheService } from "../productCache/productCacheService";
 import { OrderService } from "./orderService";
-import { OrderStatus, PaymentStatus } from "./orderTypes";
+import { OrderStatus, PaymentMode, PaymentStatus } from "./orderTypes";
 import { IdempotencyServic } from "../idempotency/idempotencyService";
 import mongoose from "mongoose";
 import { PaymentFlow } from "../payment/paymentTypes";
@@ -104,19 +104,22 @@ export class OrderController {
     const customerDetails =
       await this.CustomerService.getCustomerById(customerId);
     try {
-      const session = await this.PaymentGateWay.createSession({
-        amount: finalTotal,
-        orderId: newOrder[0]._id.toString(),
-        tenantId: tenantId,
-        currency: "INR",
-        idempotentKey: idempotencyKey as string,
-        customerId: customerDetails.id,
-        customerEmail: customerDetails.email,
-        customerName: `${customerDetails.firstName} ${customerDetails.lastName}`,
-      });
-      this.logger.info(session);
-      // Todo : Update order document => paymentID => sessionId
-      res.json({ paymentUrl: session.paymentUrl });
+      if (paymentMode === PaymentMode.CARD) {
+        const session = await this.PaymentGateWay.createSession({
+          amount: finalTotal,
+          orderId: newOrder[0]._id.toString(),
+          tenantId: tenantId,
+          currency: "INR",
+          idempotentKey: idempotencyKey as string,
+          customerId: customerDetails.id,
+          customerEmail: customerDetails.email,
+          customerName: `${customerDetails.firstName} ${customerDetails.lastName}`,
+        });
+        this.logger.info(session);
+        // Todo : Update order document => paymentID => sessionId
+        return res.json({ paymentUrl: session.paymentUrl });
+      }
+      return res.json({ paymentUrl: null });
     } catch (error) {
       if (error instanceof Error) {
         this.logger.warn(error.message);
