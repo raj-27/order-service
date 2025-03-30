@@ -41,7 +41,7 @@ export class RazorPayGateway implements PaymentFlow {
           idempotencyKey: options.idempotentKey,
           customerId: options.customerId,
         },
-        callback_url: `${config.get("client.url")}/payment`,
+        callback_url: `${config.get("client.url")}/payment?success=true&orderId=${options.orderId}&restaurantId=${options.tenantId}`,
         callback_method: "get",
       };
       const session = await this.razorpay.paymentLink.create(Options);

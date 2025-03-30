@@ -15,6 +15,7 @@ import { IdempotencyServic } from "../idempotency/idempotencyService";
 import mongoose from "mongoose";
 import { PaymentFlow } from "../payment/paymentTypes";
 import { CustomerService } from "../customer/customerService";
+import { MessageBroker } from "../types/broker";
 
 export class OrderController {
   constructor(
@@ -24,6 +25,7 @@ export class OrderController {
     private logger: Logger,
     private PaymentGateWay: PaymentFlow,
     private CustomerService: CustomerService,
+    private broker: MessageBroker,
   ) {}
   create = async (req: Request, res: Response, next: NextFunction) => {
     // todo : validate request data
@@ -87,6 +89,7 @@ export class OrderController {
       } catch (error) {
         await session.abortTransaction();
         await session.endSession();
+
         return next(createHttpError(500, error.message));
       } finally {
         await session.endSession();
@@ -117,8 +120,11 @@ export class OrderController {
         });
         this.logger.info(session);
         // Todo : Update order document => paymentID => sessionId
+        await this.broker.sendMessage("order", JSON.stringify(newOrder));
         return res.json({ paymentUrl: session.paymentUrl });
       }
+      await this.broker.sendMessage("order", JSON.stringify(newOrder));
+      // todo : update order document => paymentid => sessionid
       return res.json({ paymentUrl: null });
     } catch (error) {
       if (error instanceof Error) {

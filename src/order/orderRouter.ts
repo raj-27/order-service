@@ -4,17 +4,19 @@ import { asyncWrapper } from "../utils";
 import { OrderController } from "./OrderController";
 import { ProductCacheService } from "../productCache/productCacheService";
 import logger from "../config/logger";
-import { OrderService } from "./orderService";
 import { IdempotencyServic } from "../idempotency/idempotencyService";
-import { RazorPayGateway } from "../payment/razorpay";
-import { CustomerService } from "../customer/customerService";
+import { createRazorpayGw } from "../common/factories/razorPayFactory";
+import { createOrderService } from "../common/factories/orderServiceFactory";
+import { createCustomerService } from "../common/factories/customerServiceFactory";
+import { createMessageBroker } from "../common/factories/brokerFactory";
 const router = express.Router();
 
+const orderService = createOrderService();
+const paymentGateway = createRazorpayGw();
 const productCacheService = new ProductCacheService();
-const orderService = new OrderService();
 const idempotencyService = new IdempotencyServic();
-const paymentGateway = new RazorPayGateway();
-const customerService = new CustomerService();
+const customerService = createCustomerService();
+const broker = createMessageBroker();
 const orderController = new OrderController(
   productCacheService,
   orderService,
@@ -22,6 +24,7 @@ const orderController = new OrderController(
   logger,
   paymentGateway,
   customerService,
+  broker,
 );
 
 router.post("/", authenticate, asyncWrapper(orderController.create));

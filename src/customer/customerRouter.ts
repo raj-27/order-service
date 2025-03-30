@@ -2,11 +2,11 @@ import express from "express";
 import { asyncWrapper } from "../utils";
 import { CustomerController } from "./customerController";
 import authenticate from "../common/middleware/authenticate";
-import { CustomerService } from "./customerService";
 import logger from "../config/logger";
+import { createCustomerService } from "../common/factories/customerServiceFactory";
 const router = express.Router();
 
-const customerService = new CustomerService();
+const customerService = createCustomerService();
 const customerController = new CustomerController(customerService, logger);
 
 router.get("/", authenticate, asyncWrapper(customerController.getCustomer));

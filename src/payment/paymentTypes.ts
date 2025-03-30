@@ -18,7 +18,7 @@ export interface PaymentOptions {
   customerEmail: string;
   customerName: string;
 }
-type GatewayPaymentStatus =
+export type GatewayPaymentStatus =
   | "no_payment_required"
   | "paid"
   | "unpaid"

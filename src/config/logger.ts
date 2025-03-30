@@ -8,9 +8,6 @@ const logger = winston.createLogger({
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.json(),
-    winston.format.colorize({
-      all: true,
-    }),
   ),
   transports: [
     new winston.transports.File({
@@ -24,6 +21,7 @@ const logger = winston.createLogger({
       filename: "error.log",
       level: "error",
       silent: process.env.NODE_ENV === "test",
+      format: winston.format.combine(winston.format.colorize()),
     }),
     new winston.transports.Console({
       level: "info",

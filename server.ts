@@ -11,6 +11,7 @@ const startServer = async () => {
   try {
     await connectDB();
     broker = createMessageBroker();
+    await broker.connectProducer();
     await broker.connectConsumer();
     await broker.consumeMessage(["product", "topping"], false);
     app
@@ -23,6 +24,7 @@ const startServer = async () => {
     logger.error("Error happened: ", err.message);
     if (broker) {
       await broker.disconnectConsumer();
+      await broker.disconnectProducer();
     }
     process.exit(1);
   }
