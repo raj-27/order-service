@@ -38,6 +38,8 @@ export class OrderController {
       comment,
       address,
     } = req.body;
+
+    console.log("cart", cart);
     const totalPrice = await this.calculateTotal(cart);
 
     // Calculating discount
@@ -139,11 +141,29 @@ export class OrderController {
     }
   };
 
+  getMine = async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.auth.sub;
+    console.log({ userId });
+    if (!userId) {
+      return next(createHttpError(400, "No user id found"));
+    }
+    const customer = await this.CustomerService.getCustomerByUserId(userId);
+    console.log("customer", customer);
+    if (!customer) {
+      return next(createHttpError(400, "No customer"));
+    }
+    // Todo: Implement pagination for query cutomer order history
+    const order = await this.OrderService.getOrderByCustomerId(customer._id);
+    res.json(order);
+  };
+
   private calculateTotal = async (cart: CartItem[]) => {
     const productIds = cart.map((item) => item._id);
+    console.log("productIds", productIds);
     // Todo : proper error handling
     const productPricings =
       await this.ProductCacheService.getProductPricing(productIds);
+    console.log("productPricings", productPricings);
 
     let cartToppingIds;
     try {
@@ -166,6 +186,7 @@ export class OrderController {
       const cachedProductPrice = productPricings.find(
         (product) => product.productId === curr._id,
       );
+      console.log("cachedPRoduct", cachedProductPrice);
       return (
         acc +
         curr.qty * this.getItemTotal(curr, cachedProductPrice, toppingPricings)
@@ -185,11 +206,12 @@ export class OrderController {
       },
       0,
     );
-
+    console.log("item", item);
     const productTotal = Object.entries(
       item.chosenConfiguration.priceConfiguration,
     ).reduce((acc, [key, value]) => {
       try {
+        console.log(cachedProductPrice);
         const price =
           cachedProductPrice.priceConfiguration[key].availableOptions[value];
         return acc + price;

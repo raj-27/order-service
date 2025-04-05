@@ -10,6 +10,10 @@ export class CustomerService {
     return await customerModel.findById(id);
   }
 
+  async getCustomerByUserId(userId: string) {
+    return await customerModel.findOne({ userId });
+  }
+
   async createCustomer(customer: CustomerModel) {
     return await customerModel.create(customer);
   }

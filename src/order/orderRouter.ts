@@ -29,4 +29,6 @@ const orderController = new OrderController(
 
 router.post("/", authenticate, asyncWrapper(orderController.create));
 
+router.get("/mine", authenticate, asyncWrapper(orderController.getMine));
+
 export default router;

@@ -10,6 +10,20 @@ export class OrderService {
     return await orderModel.create([newOrder], { session });
   };
 
+  getOrderByCustomerId = async (customerId: mongoose.Types.ObjectId) => {
+    return await orderModel.find(
+      { customerId },
+      {
+        _id: 1,
+        paymentStatus: 1,
+        paymentMode: 1,
+        createdAt: 1,
+        orderStatus: 1,
+        totalAmount: 1,
+      },
+    );
+  };
+
   updateOrder = async (orderId: string, isPaymentSuccess: boolean) => {
     return await orderModel.findOneAndUpdate(
       { _id: orderId },
