@@ -78,3 +78,12 @@ export interface CartItem
   };
   qty: number;
 }
+
+export interface OrderFilter {
+  tenantId?: string;
+}
+
+export interface PageinateQuery {
+  page: number;
+  limit: number;
+}

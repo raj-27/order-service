@@ -144,6 +144,7 @@ export class OrderController {
   getAll = async (req: Request, res: Response, next: NextFunction) => {
     const { role, tenant: userTenantId } = req.auth;
     const tenantId = req.query.tenantId;
+    const { page, limit } = req.query;
     if (role === Roles.CUSTOMER) {
       return next(createHttpError(403, "Not allowed"));
     }
@@ -153,14 +154,20 @@ export class OrderController {
         filter["tenantId"] = tenantId;
       }
       // Todo : VERY IMPORTANT ADD PAGINATION
-      const orders = await this.OrderService.getAllOrders(filter);
+      const orders = await this.OrderService.getAllOrders(filter, {
+        page: parseInt(page as string) || 1,
+        limit: parseInt(limit as string) || 10,
+      });
       return res.json(orders);
     }
 
     if (role === Roles.MANAGER) {
       const filter = { tenantId: userTenantId.toString() };
       // Todo : VERY IMPORTANT ADD PAGINATION
-      const orders = await this.OrderService.getAllOrders(filter);
+      const orders = await this.OrderService.getAllOrders(filter, {
+        page: parseInt(page as string) || 1,
+        limit: parseInt(limit as string) || 10,
+      });
       return res.json(orders);
     }
     return next(createHttpError(403, "Not Allowed"));
@@ -168,6 +175,7 @@ export class OrderController {
 
   getMine = async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.auth.sub;
+    const { page, limit } = req.query;
     if (!userId) {
       return next(createHttpError(400, "No user id found"));
     }
@@ -176,7 +184,10 @@ export class OrderController {
       return next(createHttpError(400, "No customer"));
     }
     // Todo: Implement pagination for query cutomer order history
-    const order = await this.OrderService.getOrderByCustomerId(customer._id);
+    const order = await this.OrderService.getOrderByCustomerId(customer._id, {
+      page: parseInt(page as string) || 1,
+      limit: parseInt(limit as string) || 10,
+    });
     res.json(order);
   };
 
