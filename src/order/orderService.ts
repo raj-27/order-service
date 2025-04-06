@@ -24,6 +24,11 @@ export class OrderService {
     );
   };
 
+  getOrderById = async (orderId: string) => {
+    // return await orderModel.findById(orderId).populate("customerId");
+    return await orderModel.findOne({ _id: orderId });
+  };
+
   updateOrder = async (orderId: string, isPaymentSuccess: boolean) => {
     return await orderModel.findOneAndUpdate(
       { _id: orderId },

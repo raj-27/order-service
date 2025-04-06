@@ -16,6 +16,7 @@ import mongoose from "mongoose";
 import { PaymentFlow } from "../payment/paymentTypes";
 import { CustomerService } from "../customer/customerService";
 import { MessageBroker } from "../types/broker";
+import { Roles } from "../constant";
 
 export class OrderController {
   constructor(
@@ -155,6 +156,40 @@ export class OrderController {
     // Todo: Implement pagination for query cutomer order history
     const order = await this.OrderService.getOrderByCustomerId(customer._id);
     res.json(order);
+  };
+
+  getSingle = async (req: Request, res: Response, next: NextFunction) => {
+    const { sub: userId, role, tenant: tenantId } = req.auth;
+    const orderId = req.params.orderId;
+    console.log({ role, userId, tenantId, orderId });
+    if (!userId) {
+      return next(createHttpError(400, "No user id found"));
+    }
+    // Todo: Implement pagination for query cutomer order history
+    const order = await this.OrderService.getOrderById(orderId);
+
+    // What roles can access this endpoint : Admin,manager(for their own restaurant),customer(own order)
+    if (role === Roles.ADMIN) {
+      return res.json(order);
+    }
+    console.log({ tenant_id_in_Order: order.tenantId, tenantId });
+    const myRestaurantOrder = order.tenantId === tenantId.toString();
+    if (role === Roles.MANAGER && myRestaurantOrder) {
+      return res.json(order);
+    }
+
+    if (role === Roles.CUSTOMER) {
+      const customer = await this.CustomerService.getCustomerByUserId(userId);
+      console.log("customer", customer);
+
+      if (!customer) {
+        return next(createHttpError(400, "No customer found"));
+      }
+      if (order.customerId.toString() === customer.id.toString()) {
+        return res.json(order);
+      }
+    }
+    return next(createHttpError(403, "Operation not permitted"));
   };
 
   private calculateTotal = async (cart: CartItem[]) => {
