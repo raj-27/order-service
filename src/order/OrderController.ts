@@ -158,21 +158,26 @@ export class OrderController {
   getSingle = async (req: Request, res: Response, next: NextFunction) => {
     const { sub: userId, role, tenant: tenantId } = req.auth;
     const orderId = req.params.orderId;
+    const projectionFields = req.query.fields
+      ? req.query.fields.toString().split(",")
+      : [];
     if (!userId) {
       return next(createHttpError(400, "No user id found"));
     }
     // Todo: Implement pagination for query cutomer order history
-    const order = await this.OrderService.getOrderById(orderId);
+    const order = await this.OrderService.getOrderById(
+      orderId,
+      projectionFields,
+    );
 
     // What roles can access this endpoint : Admin,manager(for their own restaurant),customer(own order)
     if (role === Roles.ADMIN) {
       return res.json(order);
     }
-    const myRestaurantOrder = order.tenantId === tenantId.toString();
+    const myRestaurantOrder = order.tenantId === tenantId?.toString();
     if (role === Roles.MANAGER && myRestaurantOrder) {
       return res.json(order);
     }
-
     if (role === Roles.CUSTOMER) {
       const customer = await this.CustomerService.getCustomerByUserId(userId);
       if (!customer) {

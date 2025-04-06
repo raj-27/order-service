@@ -24,9 +24,16 @@ export class OrderService {
     );
   };
 
-  getOrderById = async (orderId: string) => {
+  getOrderById = async (orderId: string, projectionFields: string[]) => {
     // return await orderModel.findById(orderId).populate("customerId");
-    return await orderModel.findOne({ _id: orderId });
+    const projection = projectionFields.reduce(
+      (acc, field) => {
+        acc[field] = 1;
+        return acc;
+      },
+      { customerId: 1 },
+    );
+    return await orderModel.findOne({ _id: orderId }, projection);
   };
 
   updateOrder = async (orderId: string, isPaymentSuccess: boolean) => {
