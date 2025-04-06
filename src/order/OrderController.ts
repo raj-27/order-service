@@ -40,7 +40,6 @@ export class OrderController {
       address,
     } = req.body;
 
-    console.log("cart", cart);
     const totalPrice = await this.calculateTotal(cart);
 
     // Calculating discount
@@ -144,12 +143,10 @@ export class OrderController {
 
   getMine = async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.auth.sub;
-    console.log({ userId });
     if (!userId) {
       return next(createHttpError(400, "No user id found"));
     }
     const customer = await this.CustomerService.getCustomerByUserId(userId);
-    console.log("customer", customer);
     if (!customer) {
       return next(createHttpError(400, "No customer"));
     }
@@ -161,7 +158,6 @@ export class OrderController {
   getSingle = async (req: Request, res: Response, next: NextFunction) => {
     const { sub: userId, role, tenant: tenantId } = req.auth;
     const orderId = req.params.orderId;
-    console.log({ role, userId, tenantId, orderId });
     if (!userId) {
       return next(createHttpError(400, "No user id found"));
     }
@@ -172,7 +168,6 @@ export class OrderController {
     if (role === Roles.ADMIN) {
       return res.json(order);
     }
-    console.log({ tenant_id_in_Order: order.tenantId, tenantId });
     const myRestaurantOrder = order.tenantId === tenantId.toString();
     if (role === Roles.MANAGER && myRestaurantOrder) {
       return res.json(order);
@@ -180,8 +175,6 @@ export class OrderController {
 
     if (role === Roles.CUSTOMER) {
       const customer = await this.CustomerService.getCustomerByUserId(userId);
-      console.log("customer", customer);
-
       if (!customer) {
         return next(createHttpError(400, "No customer found"));
       }
@@ -194,11 +187,9 @@ export class OrderController {
 
   private calculateTotal = async (cart: CartItem[]) => {
     const productIds = cart.map((item) => item._id);
-    console.log("productIds", productIds);
     // Todo : proper error handling
     const productPricings =
       await this.ProductCacheService.getProductPricing(productIds);
-    console.log("productPricings", productPricings);
 
     let cartToppingIds;
     try {
@@ -221,7 +212,6 @@ export class OrderController {
       const cachedProductPrice = productPricings.find(
         (product) => product.productId === curr._id,
       );
-      console.log("cachedPRoduct", cachedProductPrice);
       return (
         acc +
         curr.qty * this.getItemTotal(curr, cachedProductPrice, toppingPricings)
@@ -241,12 +231,10 @@ export class OrderController {
       },
       0,
     );
-    console.log("item", item);
     const productTotal = Object.entries(
       item.chosenConfiguration.priceConfiguration,
     ).reduce((acc, [key, value]) => {
       try {
-        console.log(cachedProductPrice);
         const price =
           cachedProductPrice.priceConfiguration[key].availableOptions[value];
         return acc + price;
