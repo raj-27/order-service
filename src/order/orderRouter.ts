@@ -28,6 +28,7 @@ const orderController = new OrderController(
 );
 
 router.post("/", authenticate, asyncWrapper(orderController.create));
+router.get("/", authenticate, asyncWrapper(orderController.getAll));
 
 router.get("/mine", authenticate, asyncWrapper(orderController.getMine));
 router.get("/:orderId", authenticate, asyncWrapper(orderController.getSingle));

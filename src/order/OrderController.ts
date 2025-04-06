@@ -141,6 +141,31 @@ export class OrderController {
     }
   };
 
+  getAll = async (req: Request, res: Response, next: NextFunction) => {
+    const { role, tenant: userTenantId } = req.auth;
+    const tenantId = req.query.tenantId;
+    if (role === Roles.CUSTOMER) {
+      return next(createHttpError(403, "Not allowed"));
+    }
+    if (role === Roles.ADMIN) {
+      const filter = {};
+      if (tenantId) {
+        filter["tenantId"] = tenantId;
+      }
+      // Todo : VERY IMPORTANT ADD PAGINATION
+      const orders = await this.OrderService.getAllOrders(filter);
+      return res.json(orders);
+    }
+
+    if (role === Roles.MANAGER) {
+      const filter = { tenantId: userTenantId.toString() };
+      // Todo : VERY IMPORTANT ADD PAGINATION
+      const orders = await this.OrderService.getAllOrders(filter);
+      return res.json(orders);
+    }
+    return next(createHttpError(403, "Not Allowed"));
+  };
+
   getMine = async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.auth.sub;
     if (!userId) {
@@ -169,8 +194,6 @@ export class OrderController {
       orderId,
       projectionFields,
     );
-
-    console.log(order.customerId);
 
     // What roles can access this endpoint : Admin,manager(for their own restaurant),customer(own order)
     if (role === Roles.ADMIN) {

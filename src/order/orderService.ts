@@ -24,6 +24,14 @@ export class OrderService {
     );
   };
 
+  getAllOrders = async (filter) => {
+    return await orderModel
+      .find(filter)
+      .sort({ createAt: -1 })
+      .populate("customerId")
+      .exec();
+  };
+
   getOrderById = async (orderId: string, projectionFields: string[]) => {
     // return await orderModel.findById(orderId).populate("customerId");
     const projection = projectionFields.reduce(
