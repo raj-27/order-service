@@ -58,7 +58,11 @@ const cartSchema = new mongoose.Schema<CartItem>({
 const orderSchema = new mongoose.Schema<Order>(
   {
     cart: { type: [cartSchema], required: true },
-    customerId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    customerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "customer",
+      required: true,
+    },
     totalAmount: { type: Number, required: true },
     discount: { type: Number, required: true },
     taxes: { type: Number, required: true },

@@ -170,6 +170,8 @@ export class OrderController {
       projectionFields,
     );
 
+    console.log(order.customerId);
+
     // What roles can access this endpoint : Admin,manager(for their own restaurant),customer(own order)
     if (role === Roles.ADMIN) {
       return res.json(order);
@@ -183,7 +185,7 @@ export class OrderController {
       if (!customer) {
         return next(createHttpError(400, "No customer found"));
       }
-      if (order.customerId.toString() === customer.id.toString()) {
+      if (order.customerId._id.toString() === customer.id.toString()) {
         return res.json(order);
       }
     }

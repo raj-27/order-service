@@ -33,7 +33,10 @@ export class OrderService {
       },
       { customerId: 1 },
     );
-    return await orderModel.findOne({ _id: orderId }, projection);
+    return await orderModel
+      .findOne({ _id: orderId }, projection)
+      .populate("customerId", { firstName: 1, lastName: 1 })
+      .exec();
   };
 
   updateOrder = async (orderId: string, isPaymentSuccess: boolean) => {
