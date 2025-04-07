@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import orderModel from "./orderModel";
-import { Order, PaymentStatus } from "./orderTypes";
+import { Order, OrderStatus, PaymentStatus } from "./orderTypes";
 import { paginationLabels } from "../config/paginate";
 import { OrderFilter, PageinateQuery } from "../types";
 
@@ -61,6 +61,7 @@ export class OrderService {
           as: "customer",
         },
       },
+      { $unwind: "$customer" },
     ];
 
     const result = await orderModel.aggregatePaginate(
@@ -79,22 +80,31 @@ export class OrderService {
     //   .exec();
   };
 
-  getOrderById = async (orderId: string, projectionFields: string[]) => {
+  getOrderById = async (orderId: string, projectionFields?: string[]) => {
     // return await orderModel.findById(orderId).populate("customerId");
-    const projection = projectionFields.reduce(
+    const projection = projectionFields?.reduce(
       (acc, field) => {
         acc[field] = 1;
         return acc;
       },
       { customerId: 1 },
     );
+
     return await orderModel
       .findOne({ _id: orderId }, projection)
       .populate("customerId", { firstName: 1, lastName: 1 })
       .exec();
   };
 
-  updateOrder = async (orderId: string, isPaymentSuccess: boolean) => {
+  updateOrderStatus = async (orderId: string, orderStaus: OrderStatus) => {
+    return await orderModel.findOneAndUpdate(
+      { _id: orderId },
+      { orderStatus: orderStaus },
+      { new: true },
+    );
+  };
+
+  updatePayment = async (orderId: string, isPaymentSuccess: boolean) => {
     return await orderModel.findOneAndUpdate(
       { _id: orderId },
       {

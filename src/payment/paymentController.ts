@@ -19,7 +19,7 @@ export class PaymentController {
     const verifiedSession = await this.paymentGw.getSession(order_id);
     console.log("verified sessionf", verifiedSession);
     const isPaymentSuccess = verifiedSession.paymentStatus === "paid";
-    const updatedOrder = await this.orderService.updateOrder(
+    const updatedOrder = await this.orderService.updatePayment(
       verifiedSession.metadata.orderId,
       isPaymentSuccess,
     );

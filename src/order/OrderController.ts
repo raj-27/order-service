@@ -226,6 +226,32 @@ export class OrderController {
     return next(createHttpError(403, "Operation not permitted"));
   };
 
+  changeStatus = async (req: Request, res: Response, next: NextFunction) => {
+    const { sub: userId, role, tenant: tenantId } = req.auth;
+    const orderId = req.params.orderId;
+    const status = req.body.status;
+
+    if (role === Roles.MANAGER || Roles.ADMIN) {
+      const order = await this.OrderService.getOrderById(orderId);
+      if (!order) {
+        return next(createHttpError(400, "Order not found"));
+      }
+      const isMyRestaurantOrder = order.tenantId === tenantId;
+      if (role === Roles.MANAGER && !isMyRestaurantOrder) {
+        return next(createHttpError(403, "Operation not permitted"));
+      }
+      // Todo: status put proper validation
+      const updaedOrder = await this.OrderService.updateOrderStatus(
+        orderId,
+        status,
+      );
+      // todo: send updated status to kafka
+      return res.json({ _id: updaedOrder._id });
+    }
+
+    return next(createHttpError(403, "Not Allowed"));
+  };
+
   private calculateTotal = async (cart: CartItem[]) => {
     const productIds = cart.map((item) => item._id);
     // Todo : proper error handling
