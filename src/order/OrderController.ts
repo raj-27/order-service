@@ -10,7 +10,12 @@ import createHttpError from "http-errors";
 import { Logger } from "winston";
 import { ProductCacheService } from "../productCache/productCacheService";
 import { OrderService } from "./orderService";
-import { OrderStatus, PaymentMode, PaymentStatus } from "./orderTypes";
+import {
+  OrderEvents,
+  OrderStatus,
+  PaymentMode,
+  PaymentStatus,
+} from "./orderTypes";
 import { IdempotencyServic } from "../idempotency/idempotencyService";
 import mongoose from "mongoose";
 import { PaymentFlow } from "../payment/paymentTypes";
@@ -108,6 +113,7 @@ export class OrderController {
     // Payment Processing
     const customerDetails =
       await this.CustomerService.getCustomerById(customerId);
+    console.log("first");
     try {
       if (paymentMode === PaymentMode.CARD) {
         const session = await this.PaymentGateWay.createSession({
@@ -120,9 +126,18 @@ export class OrderController {
           customerEmail: customerDetails.email,
           customerName: `${customerDetails.firstName} ${customerDetails.lastName}`,
         });
-        this.logger.info(session);
+        console.log("session", session);
+        const brokerMessage = {
+          event_type: OrderEvents.ORDER_CREATE,
+          data: newOrder[0],
+        };
+        console.log(brokerMessage);
         // Todo : Update order document => paymentID => sessionId
-        await this.broker.sendMessage("order", JSON.stringify(newOrder));
+        await this.broker.sendMessage(
+          "order",
+          JSON.stringify(brokerMessage),
+          newOrder[0]._id.toString(),
+        );
         return res.json({ paymentUrl: session.paymentUrl });
       }
       await this.broker.sendMessage("order", JSON.stringify(newOrder));
@@ -241,12 +256,20 @@ export class OrderController {
         return next(createHttpError(403, "Operation not permitted"));
       }
       // Todo: status put proper validation
-      const updaedOrder = await this.OrderService.updateOrderStatus(
+      const updatedOrder = await this.OrderService.updateOrderStatus(
         orderId,
         status,
       );
-      // todo: send updated status to kafka
-      return res.json({ _id: updaedOrder._id });
+      const brokerMessage = {
+        event_type: OrderEvents.ORDER_STATUS_UPDATE,
+        data: updatedOrder,
+      };
+      await this.broker.sendMessage(
+        "order",
+        JSON.stringify(brokerMessage),
+        updatedOrder._id.toString(),
+      );
+      return res.json({ _id: updatedOrder._id });
     }
 
     return next(createHttpError(403, "Not Allowed"));

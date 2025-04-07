@@ -3,6 +3,7 @@ import { Logger } from "winston";
 import { PaymentFlow } from "./paymentTypes";
 import { OrderService } from "../order/orderService";
 import { MessageBroker } from "../types/broker";
+import { OrderEvents } from "../order/orderTypes";
 
 export class PaymentController {
   constructor(
@@ -23,10 +24,15 @@ export class PaymentController {
       verifiedSession.metadata.orderId,
       isPaymentSuccess,
     );
-    console.log(updatedOrder);
-    // Todo Done: send update to kafka broker
-    // Todo : Think about broker message failed.
-    await this.broker.sendMessage("order", JSON.stringify(updatedOrder));
+    const brokerMessage = {
+      event_type: OrderEvents.PAYMENT_STATUS_UPDATE,
+      data: updatedOrder,
+    };
+    await this.broker.sendMessage(
+      "order",
+      JSON.stringify(brokerMessage),
+      updatedOrder._id.toString(),
+    );
     return res.json({ success: true });
   };
 }
