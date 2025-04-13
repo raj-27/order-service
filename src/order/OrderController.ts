@@ -113,7 +113,6 @@ export class OrderController {
     // Payment Processing
     const customerDetails =
       await this.CustomerService.getCustomerById(customerId);
-    console.log("first");
     try {
       if (paymentMode === PaymentMode.CARD) {
         const session = await this.PaymentGateWay.createSession({
@@ -126,12 +125,10 @@ export class OrderController {
           customerEmail: customerDetails.email,
           customerName: `${customerDetails.firstName} ${customerDetails.lastName}`,
         });
-        console.log("session", session);
         const brokerMessage = {
           event_type: OrderEvents.ORDER_CREATE,
           data: newOrder[0],
         };
-        console.log(brokerMessage);
         // Todo : Update order document => paymentID => sessionId
         await this.broker.sendMessage(
           "order",

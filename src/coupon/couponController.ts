@@ -41,14 +41,11 @@ export class CouponController {
 
   verify = async (req: Request, res: Response, next: NextFunction) => {
     const { code, tenantId } = req.body;
-    console.log({ code, tenantId });
     // Todo: request validation
     const coupon = await this.couponService.getCouponByCodeAndTenant(
       code,
       tenantId,
     );
-
-    console.log({ coupon });
     if (!coupon) {
       // const error = createHttpError(400, "Coupon does not exists");
       // return next(error);

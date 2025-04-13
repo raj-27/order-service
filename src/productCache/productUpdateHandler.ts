@@ -3,7 +3,7 @@ import productCaheModel from "./productCaheModel";
 
 export const handleProductUpdate = async (value: string) => {
   try {
-    const product: ProductMessage = JSON.parse(value);
+    const { data: product }: { data: ProductMessage } = JSON.parse(value);
     return await productCaheModel.updateOne(
       { productId: product.id },
       { $set: { priceConfiguration: product.priceConfiguration } },

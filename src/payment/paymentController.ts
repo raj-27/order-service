@@ -14,11 +14,8 @@ export class PaymentController {
   ) {}
   handleWebhook = async (req: Request, res: Response, next: NextFunction) => {
     const webHookBody = req.body;
-    console.log(webHookBody);
-    console.log(webHookBody?.payload?.payment?.entity);
     const { order_id } = webHookBody?.payload?.payment?.entity;
     const verifiedSession = await this.paymentGw.getSession(order_id);
-    console.log("verified sessionf", verifiedSession);
     const isPaymentSuccess = verifiedSession.paymentStatus === "paid";
     const updatedOrder = await this.orderService.updatePayment(
       verifiedSession.metadata.orderId,

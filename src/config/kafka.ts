@@ -71,7 +71,6 @@ export class KafkaBroker implements MessageBroker {
         partition,
         message,
       }: EachMessagePayload) => {
-        // Logic to handle icoming message
         switch (topic) {
           case "product":
             await handleProductUpdate(message.value.toString());
@@ -82,7 +81,6 @@ export class KafkaBroker implements MessageBroker {
             console.log("Doing Nothing");
             break;
         }
-        console.log({ value: message.value.toString(), topic, partition });
       },
     });
   }

@@ -3,7 +3,7 @@ import toppingCacheModel from "./toppingCacheModel";
 
 export const handleToppingUpdate = async (value: string) => {
   try {
-    const topping: ToppingPriceCache = JSON.parse(value);
+    const { data: topping }: { data: ToppingPriceCache } = JSON.parse(value);
     return await toppingCacheModel.updateOne(
       { toppingId: topping._id },
       {
