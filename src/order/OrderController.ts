@@ -8,6 +8,8 @@ import {
 } from "../types";
 import createHttpError from "http-errors";
 import { Logger } from "winston";
+import mongoose from "mongoose";
+import config from "config";
 import { ProductCacheService } from "../productCache/productCacheService";
 import { OrderService } from "./orderService";
 import {
@@ -17,7 +19,6 @@ import {
   PaymentStatus,
 } from "./orderTypes";
 import { IdempotencyServic } from "../idempotency/idempotencyService";
-import mongoose from "mongoose";
 import { PaymentFlow } from "../payment/paymentTypes";
 import { CustomerService } from "../customer/customerService";
 import { MessageBroker } from "../types/broker";
@@ -113,6 +114,10 @@ export class OrderController {
     // Payment Processing
     const customerDetails =
       await this.CustomerService.getCustomerById(customerId);
+    const brokerMessage = {
+      event_type: OrderEvents.ORDER_CREATE,
+      data: { ...newOrder[0], customer: customerDetails },
+    };
     try {
       if (paymentMode === PaymentMode.CARD) {
         const session = await this.PaymentGateWay.createSession({
@@ -125,19 +130,20 @@ export class OrderController {
           customerEmail: customerDetails.email,
           customerName: `${customerDetails.firstName} ${customerDetails.lastName}`,
         });
-        const brokerMessage = {
-          event_type: OrderEvents.ORDER_CREATE,
-          data: newOrder[0],
-        };
+
         // Todo : Update order document => paymentID => sessionId
         await this.broker.sendMessage(
-          "order",
+          config.get("kafka.order_topic"),
           JSON.stringify(brokerMessage),
           newOrder[0]._id.toString(),
         );
         return res.json({ paymentUrl: session.paymentUrl });
       }
-      await this.broker.sendMessage("order", JSON.stringify(newOrder));
+      await this.broker.sendMessage(
+        config.get("kafka.order_topic"),
+        JSON.stringify(brokerMessage),
+        newOrder[0]._id.toString(),
+      );
       // todo : update order document => paymentid => sessionid
       return res.json({ paymentUrl: null });
     } catch (error) {
@@ -257,9 +263,12 @@ export class OrderController {
         orderId,
         status,
       );
+      const customer = await this.CustomerService.getCustomerByUserId(
+        updatedOrder.customerId.toString(),
+      );
       const brokerMessage = {
         event_type: OrderEvents.ORDER_STATUS_UPDATE,
-        data: updatedOrder,
+        data: { ...updatedOrder.toObject(), customer },
       };
       await this.broker.sendMessage(
         "order",
