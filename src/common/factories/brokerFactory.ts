@@ -8,7 +8,10 @@ export const createMessageBroker = (): MessageBroker => {
   console.log("connecting kafka server.....");
   // Singelton
   if (!broker) {
-    broker = new KafkaBroker("order-service", [config.get("kafka.broker")]);
+    broker = new KafkaBroker(
+      "order-service",
+      config.get<string[]>("kafka.broker"),
+    );
   }
   return broker;
 };
