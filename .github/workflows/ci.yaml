@@ -11,7 +11,7 @@ jobs:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
     env:
-      IMAGE_NAME: rajyadav27/mernstack_catalog_service
+      IMAGE_NAME: rajyadav27/mernstack_order_service
       IMAGE_TAG: build-${{ github.run_number }}
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
