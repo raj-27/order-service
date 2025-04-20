@@ -3,7 +3,7 @@ export interface CustomMetadata {
 }
 
 export interface VerifiedSession {
-  id: String;
+  id: string;
   metadata: CustomMetadata;
   paymentStatus: GatewayPaymentStatus;
 }

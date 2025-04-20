@@ -2,7 +2,6 @@ import { Response } from "express";
 import { Request } from "express-jwt";
 import { CustomerService } from "./customerService";
 import { Logger } from "winston";
-import customerModel from "./customerModel";
 
 export class CustomerController {
   constructor(

@@ -11,7 +11,7 @@ export class CouponService {
   };
 
   getCoupons = async (filter) => {
-    return await couponModel.find();
+    return await couponModel.find(filter);
   };
 
   getCouponById = async (id: string) => {

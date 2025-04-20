@@ -7,7 +7,7 @@ export class IdempotencyServic {
   };
 
   createIdempotency = async (
-    idempontencyObject: { key: string | string[]; response: Object },
+    idempontencyObject: { key: string | string[]; response: object },
     session: mongoose.mongo.ClientSession,
   ) => {
     return await idempotencyModel.create([idempontencyObject], { session });

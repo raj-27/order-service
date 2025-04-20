@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
 import { Logger } from "winston";
 import { PaymentFlow } from "./paymentTypes";
 import { OrderService } from "../order/orderService";
@@ -14,9 +14,10 @@ export class PaymentController {
     private broker: MessageBroker,
     private Logger: Logger,
   ) {}
-  handleWebhook = async (req: Request, res: Response, next: NextFunction) => {
+  handleWebhook = async (req: Request, res: Response) => {
     const webHookBody = req.body;
-    const { order_id } = webHookBody?.payload?.payment?.entity;
+    const entity = webHookBody?.payload?.payment?.entity;
+    const order_id = entity?.order_id;
     const verifiedSession = await this.paymentGw.getSession(order_id);
     const isPaymentSuccess = verifiedSession.paymentStatus === "paid";
     const updatedOrder = await this.orderService.updatePayment(

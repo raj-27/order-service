@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import toppingCacheModel from "../toppingCache/toppingCacheModel";
 import productCaheModel from "./productCaheModel";
 import couponModel from "../coupon/couponModel";
@@ -10,7 +9,7 @@ export class ProductCacheService {
     return await productCaheModel.find({ productId: { $in: productId } });
   };
 
-  getToppingPricings = async (cartToppingIds: any) => {
+  getToppingPricings = async (cartToppingIds: string[]) => {
     return await toppingCacheModel.find({
       toppingId: { $in: cartToppingIds },
     });

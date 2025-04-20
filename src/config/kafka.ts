@@ -32,7 +32,7 @@ export class KafkaBroker implements MessageBroker {
       };
     }
 
-    const kafka = new Kafka({ clientId, brokers });
+    const kafka = new Kafka(kafkaConfig);
     this.producer = kafka.producer();
     this.cosumer = kafka.consumer({ groupId: clientId });
   }
@@ -92,7 +92,7 @@ export class KafkaBroker implements MessageBroker {
     await this.cosumer.run({
       eachMessage: async ({
         topic,
-        partition,
+        // partition,
         message,
       }: EachMessagePayload) => {
         switch (topic) {
@@ -101,6 +101,7 @@ export class KafkaBroker implements MessageBroker {
             break;
           case "topping":
             await handleToppingUpdate(message.value.toString());
+            break;
           default:
             console.log("Doing Nothing");
             break;

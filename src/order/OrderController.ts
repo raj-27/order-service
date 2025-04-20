@@ -245,7 +245,7 @@ export class OrderController {
   };
 
   changeStatus = async (req: Request, res: Response, next: NextFunction) => {
-    const { sub: userId, role, tenant: tenantId } = req.auth;
+    const { role, tenant: tenantId } = req.auth;
     const orderId = req.params.orderId;
     const status = req.body.status;
 

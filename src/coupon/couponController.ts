@@ -39,7 +39,7 @@ export class CouponController {
     res.json(Coupon);
   };
 
-  verify = async (req: Request, res: Response, next: NextFunction) => {
+  verify = async (req: Request, res: Response) => {
     const { code, tenantId } = req.body;
     // Todo: request validation
     const coupon = await this.couponService.getCouponByCodeAndTenant(
