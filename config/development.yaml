@@ -4,6 +4,20 @@ server:
 auth:
   jwksUri: http://localhost:5501/.well-known/jwks.json
 database:
-  url: mongodb+srv://raj-27:AjEkjjxcIHSIRSsV@cluster0.fuksv.mongodb.net/order-db
+  url: mongodb+srv://raj819314:ipyM7PSFxjFZAu8o@cluster0.6vga2.mongodb.net/order?retryWrites=true&w=majority&appName=Cluster0&ssl=true
 kafka:
-  broker: localhost:9092
+  brokers:
+    - localhost:9092
+  order_topic: order
+  sasl:
+    username: ""
+    password: ""
+razorpay:
+  key_id: rzp_test_4xrY9XIJw7Lr58
+  key_secret: KHP9kLwga7zhjxMICfdXF9c6
+client:
+  url: http://localhost:3000
+frontend:
+  clientUI: http://localhost:3000
+  adminUI: http://localhost:5173
+  apiGateway: http://localhost:8000
