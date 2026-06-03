@@ -34,17 +34,6 @@ export class OrderService {
       customLabels: paginationLabels,
     });
     return result;
-    // return await orderModel.find(
-    //   { customerId },
-    //   {
-    //     _id: 1,
-    //     paymentStatus: 1,
-    //     paymentMode: 1,
-    //     createdAt: 1,
-    //     orderStatus: 1,
-    //     totalAmount: 1,
-    //   },
-    // );
   };
 
   getAllOrders = async (
@@ -89,11 +78,31 @@ export class OrderService {
       },
       { customerId: 1 },
     );
+    const result = await orderModel.aggregate([
+      {
+        $match: { _id: new mongoose.Types.ObjectId(orderId) },
+      },
+      {
+        $lookup: {
+          from: "customers",
+          localField: "customerId",
+          foreignField: "_id",
+          as: "customer",
+        },
+      },
+      {
+        $unwind: "$customer",
+      },
+      {
+        $project: {
+          ...projection,
+          "customer.firstName": 1,
+          "customer.lastName": 1,
+        },
+      },
+    ]);
 
-    return await orderModel
-      .findOne({ _id: orderId }, projection)
-      .populate("customerId", { firstName: 1, lastName: 1 })
-      .exec();
+    return result[0] || null;
   };
 
   updateOrderStatus = async (orderId: string, orderStaus: OrderStatus) => {

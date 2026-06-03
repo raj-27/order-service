@@ -2,7 +2,7 @@
 
 ARG NODE_VERSION=21.7.1
 
-FROM node:${NODE_VERSION}-alpine as builder
+FROM node:${NODE_VERSION}-alpine AS builder
 
 
 WORKDIR /home/node/app
@@ -20,7 +20,7 @@ COPY . .
 RUN npm run build
 
 
-FROM node:${NODE_VERSION}-alpine as runner
+FROM node:${NODE_VERSION}-alpine AS runner
 
 USER node
 

@@ -19,6 +19,7 @@ export class PaymentController {
     const entity = webHookBody?.payload?.payment?.entity;
     const order_id = entity?.order_id;
     const verifiedSession = await this.paymentGw.getSession(order_id);
+
     const isPaymentSuccess = verifiedSession.paymentStatus === "paid";
     const updatedOrder = await this.orderService.updatePayment(
       verifiedSession.metadata.orderId,
@@ -31,7 +32,6 @@ export class PaymentController {
       event_type: OrderEvents.PAYMENT_STATUS_UPDATE,
       data: { ...updatedOrder.toObject(), customer },
     };
-    console.log("Message in payment controller", brokerMessage);
     await this.broker.sendMessage(
       "order",
       JSON.stringify(brokerMessage),

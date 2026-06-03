@@ -1,10 +1,10 @@
 import { PaymentFlow, PaymentOptions } from "./paymentTypes";
 import Stripe from "stripe";
-import config from "config";
+import { Config } from "../config";
 export class StripeGateway implements PaymentFlow {
   private stripe: Stripe;
   constructor() {
-    this.stripe = new Stripe(config.get("stripe.secretKey"));
+    this.stripe = new Stripe(Config.STRIPE_SECRET_KEY);
   }
 
   async createSession(options: PaymentOptions) {

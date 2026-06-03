@@ -1,3 +1,4 @@
+import logger from "../config/logger";
 import { ProductMessage } from "../types";
 import productCaheModel from "./productCaheModel";
 
@@ -10,6 +11,6 @@ export const handleProductUpdate = async (value: string) => {
       { upsert: true },
     );
   } catch (error) {
-    console.error("Error updating product in cache:", error);
+    logger.error("Error updating product in cache:", error);
   }
 };

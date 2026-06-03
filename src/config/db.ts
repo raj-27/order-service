@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
-import config from "config";
 import logger from "./logger";
+import { Config } from ".";
 
 const connectDB = async () => {
   try {
-    logger.info(config.get("database.url"));
+    logger.info(Config.DATABASE_URL);
     mongoose.connection.on("connected", () => {
       logger.info("Connected to database successfully");
     });
@@ -13,7 +13,7 @@ const connectDB = async () => {
       logger.error("Error in connecting to database.", err);
     });
 
-    await mongoose.connect(config.get("database.url"));
+    await mongoose.connect(Config.DATABASE_URL);
   } catch (err) {
     if (err instanceof Error) {
       logger.error("Error in connecting to database.", err);

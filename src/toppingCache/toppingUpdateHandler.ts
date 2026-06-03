@@ -1,3 +1,4 @@
+import logger from "../config/logger";
 import { ToppingPriceCache } from "../types";
 import toppingCacheModel from "./toppingCacheModel";
 
@@ -15,6 +16,6 @@ export const handleToppingUpdate = async (value: string) => {
       { upsert: true },
     );
   } catch (error) {
-    console.log(error);
+    logger.error(error.toString());
   }
 };

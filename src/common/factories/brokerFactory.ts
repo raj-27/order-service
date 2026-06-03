@@ -1,17 +1,13 @@
-import config from "config";
 import { KafkaBroker } from "../../config/kafka";
 import { MessageBroker } from "../../types/broker";
+import { Config } from "../../config";
 
 let broker: MessageBroker | null = null;
 
 export const createMessageBroker = (): MessageBroker => {
-  console.log("connecting kafka server.....");
   // Singelton
   if (!broker) {
-    broker = new KafkaBroker(
-      "order-service",
-      config.get<string[]>("kafka.broker"),
-    );
+    broker = new KafkaBroker("order-service", Config.KAFKA_BROKERS);
   }
   return broker;
 };

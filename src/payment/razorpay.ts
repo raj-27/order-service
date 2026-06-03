@@ -5,16 +5,16 @@ import {
   VerifiedSession,
 } from "./paymentTypes";
 import Razorpay from "razorpay";
-import config from "config";
 import { ApplicationConstant } from "../constant";
+import { Config } from "../config";
 
 export class RazorPayGateway implements PaymentFlow {
   private razorpay: Razorpay;
 
   constructor() {
     this.razorpay = new Razorpay({
-      key_id: config.get("razorpay.key_id"),
-      key_secret: config.get("razorpay.key_secret"),
+      key_id: Config.RAZORPAY_KEY_ID,
+      key_secret: Config.RAZORPAY_KEY_SECRET,
     });
   }
 
@@ -41,7 +41,7 @@ export class RazorPayGateway implements PaymentFlow {
           idempotencyKey: options.idempotentKey,
           customerId: options.customerId,
         },
-        callback_url: `${config.get("client.url")}/payment?success=true&orderId=${options.orderId}&restaurantId=${options.tenantId}`,
+        callback_url: `${Config.CLIENT_URL}/payment?success=true&orderId=${options.orderId}&restaurantId=${options.tenantId}`,
         callback_method: "get",
       };
       const session = await this.razorpay.paymentLink.create(Options);

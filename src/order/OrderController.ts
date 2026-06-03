@@ -9,7 +9,6 @@ import {
 import createHttpError from "http-errors";
 import { Logger } from "winston";
 import mongoose from "mongoose";
-import config from "config";
 import { ProductCacheService } from "../productCache/productCacheService";
 import { OrderService } from "./orderService";
 import {
@@ -23,6 +22,7 @@ import { PaymentFlow } from "../payment/paymentTypes";
 import { CustomerService } from "../customer/customerService";
 import { MessageBroker } from "../types/broker";
 import { Roles } from "../constant";
+import { Config } from "../config";
 
 export class OrderController {
   constructor(
@@ -34,45 +34,64 @@ export class OrderController {
     private CustomerService: CustomerService,
     private broker: MessageBroker,
   ) {}
+
   create = async (req: Request, res: Response, next: NextFunction) => {
-    // todo : validate request data
-    const {
-      cart,
-      couponCode,
-      tenantId,
-      paymentMode,
-      customerId,
-      comment,
-      address,
-    } = req.body;
-
-    const totalPrice = await this.calculateTotal(cart);
-
-    // Calculating discount
-    let discountPercentage = 0;
-    if (couponCode) {
-      discountPercentage = await this.getDiscountPercentage(
+    try {
+      const {
+        cart,
         couponCode,
         tenantId,
+        paymentMode,
+        customerId,
+        comment,
+        address,
+      } = req.body;
+
+      const idempotencyKey = req.headers["idempotency-key"] as string;
+
+      if (!idempotencyKey) {
+        return next(createHttpError(400, "Idempotency key is required"));
+      }
+
+      // 1️⃣ Check idempotency
+      const existing =
+        await this.IdempotencyService.getIdempotency(idempotencyKey);
+
+      if (existing) {
+        // return previous response (correct idempotency behavior)
+        return res.json(existing.response);
+      }
+
+      // 2️⃣ Pricing Logic
+      const totalPrice = await this.calculateTotal(cart);
+
+      let discountPercentage = 0;
+      if (couponCode) {
+        discountPercentage = await this.getDiscountPercentage(
+          couponCode,
+          tenantId,
+        );
+      }
+
+      const discountAmount = Math.round(
+        (totalPrice * discountPercentage) / 100,
       );
-    }
-    const discountAmount = Math.round((totalPrice * discountPercentage) / 100);
-    const priceAfterDiscount = totalPrice - discountAmount;
-    // Todo : May be store in db for each tenant
-    const TAX_PERCENT = 18;
-    const taxes = Math.round(priceAfterDiscount * TAX_PERCENT) / 100;
-    // Todo: maybe store in database for each tenant or maybe calculated according to buisness rule
-    const DELIVERY_CHARGES = 50;
-    const finalTotal = priceAfterDiscount + taxes + DELIVERY_CHARGES;
-    const idempotencyKey = req.headers["idempotency-key"];
-    const idempotency =
-      await this.IdempotencyService.getIdempotency(idempotencyKey);
-    let newOrder = idempotency ? [idempotency.response] : [];
-    if (!idempotency) {
+      const priceAfterDiscount = totalPrice - discountAmount;
+
+      const TAX_PERCENT = 18;
+      const taxes = Math.round(priceAfterDiscount * TAX_PERCENT) / 100;
+
+      const DELIVERY_CHARGES = 50;
+      const finalTotal = priceAfterDiscount + taxes + DELIVERY_CHARGES;
+
+      // 3️⃣ Start transaction
       const session = await mongoose.startSession();
       await session.startTransaction();
+
+      let createdOrder;
+
       try {
-        newOrder = await this.OrderService.createOrder(
+        const orderDocs = await this.OrderService.createOrder(
           {
             cart,
             customerId,
@@ -89,79 +108,80 @@ export class OrderController {
           },
           session,
         );
+
+        // 4️⃣ Convert to plain object (fix circular structure issue)
+        createdOrder = orderDocs[0].toObject();
+
+        // Store idempotency record
         await this.IdempotencyService.createIdempotency(
-          { key: idempotencyKey, response: newOrder[0] },
+          { key: idempotencyKey, response: createdOrder },
           session,
         );
+
         await session.commitTransaction();
-      } catch (error) {
+      } catch (err) {
         await session.abortTransaction();
         await session.endSession();
-
-        return next(createHttpError(500, error.message));
+        throw err;
       } finally {
         await session.endSession();
       }
-    } else {
-      return next(
-        createHttpError(
-          500,
-          `Idempotency key is already present ${idempotencyKey}`,
-        ),
-      );
-    }
 
-    // Payment Processing
-    const customerDetails =
-      await this.CustomerService.getCustomerById(customerId);
-    const brokerMessage = {
-      event_type: OrderEvents.ORDER_CREATE,
-      data: { ...newOrder[0], customer: customerDetails },
-    };
-    try {
+      // 5️⃣ Get customer
+      const customerDetails =
+        await this.CustomerService.getCustomerById(customerId);
+
+      // Create Kafka safe message (no circular objects)
+      const brokerMessage = {
+        event_type: OrderEvents.ORDER_CREATE,
+        data: { ...createdOrder, customer: customerDetails },
+      };
+
+      // 6️⃣ Payment Mode Flow
       if (paymentMode === PaymentMode.CARD) {
-        const session = await this.PaymentGateWay.createSession({
+        const paymentSession = await this.PaymentGateWay.createSession({
           amount: finalTotal,
-          orderId: newOrder[0]._id.toString(),
-          tenantId: tenantId,
+          orderId: createdOrder._id.toString(),
+          tenantId,
           currency: "INR",
-          idempotentKey: idempotencyKey as string,
+          idempotentKey: idempotencyKey,
           customerId: customerDetails.id,
           customerEmail: customerDetails.email,
           customerName: `${customerDetails.firstName} ${customerDetails.lastName}`,
         });
 
-        // Todo : Update order document => paymentID => sessionId
+        // Publish Kafka event
         await this.broker.sendMessage(
-          config.get("kafka.order_topic"),
+          Config.KAFKA_ORDER_TOPIC,
           JSON.stringify(brokerMessage),
-          newOrder[0]._id.toString(),
+          createdOrder._id.toString(),
         );
-        return res.json({ paymentUrl: session.paymentUrl });
+
+        return res.json({ paymentUrl: paymentSession.paymentUrl });
       }
+
+      // 7️⃣ COD Flow
       await this.broker.sendMessage(
-        config.get("kafka.order_topic"),
+        Config.KAFKA_ORDER_TOPIC,
         JSON.stringify(brokerMessage),
-        newOrder[0]._id.toString(),
+        createdOrder._id.toString(),
       );
-      // todo : update order document => paymentid => sessionid
+
       return res.json({ paymentUrl: null });
     } catch (error) {
-      if (error instanceof Error) {
-        this.logger.warn(error.message);
-        return next(
-          createHttpError(
-            500,
-            `Error occur while making payment request: ${error.message}`,
-          ),
-        );
-      }
+      this.logger.warn(error.message);
+      return next(
+        createHttpError(
+          500,
+          `Something went wrong while creating order: ${error.message}`,
+        ),
+      );
     }
   };
 
   getAll = async (req: Request, res: Response, next: NextFunction) => {
     const { role, tenant: userTenantId } = req.auth;
-    const tenantId = req.query.tenantId;
+    const tenantId = req.query.tenantId ?? userTenantId;
     const { page, limit } = req.query;
     if (role === Roles.CUSTOMER) {
       return next(createHttpError(403, "Not allowed"));
@@ -180,7 +200,7 @@ export class OrderController {
     }
 
     if (role === Roles.MANAGER) {
-      const filter = { tenantId: userTenantId.toString() };
+      const filter = { tenantId: tenantId.toString() };
       // Todo : VERY IMPORTANT ADD PAGINATION
       const orders = await this.OrderService.getAllOrders(filter, {
         page: parseInt(page as string) || 1,
@@ -298,7 +318,7 @@ export class OrderController {
         ];
       }, []);
     } catch (error) {
-      console.log("Error", error);
+      this.logger.error(error);
     }
 
     // Todo : What will happen if topping does not exists in the cache

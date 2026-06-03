@@ -12,9 +12,11 @@ export class CustomerController {
   getCustomer = async (req: Request, res: Response) => {
     // todo : add these fields to jwt in auth service
     const { sub: userId, firstName, lastName, email } = req.auth;
-    console.log(req.auth);
+
+    // Check user exists in DB
     const customer = await this.CustomerService.getCustomer(userId);
 
+    // If user not exist create record of that user
     if (!customer) {
       const newCustomer = await this.CustomerService.createCustomer({
         userId,

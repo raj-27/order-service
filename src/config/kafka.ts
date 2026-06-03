@@ -8,7 +8,8 @@ import {
 import { MessageBroker } from "../types/broker";
 import { handleProductUpdate } from "../productCache/productUpdateHandler";
 import { handleToppingUpdate } from "../toppingCache/toppingUpdateHandler";
-import config from "config";
+import { Config } from ".";
+import logger from "./logger";
 export class KafkaBroker implements MessageBroker {
   private cosumer: Consumer;
   private producer: Producer;
@@ -19,15 +20,15 @@ export class KafkaBroker implements MessageBroker {
       brokers,
     };
 
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "prod") {
       kafkaConfig = {
         ...kafkaConfig,
         ssl: true,
         connectionTimeout: 45000,
         sasl: {
           mechanism: "plain",
-          username: config.get("kafka.sasl.username"),
-          password: config.get("kafka.sasl.password"),
+          username: Config.KAFKA_SASL_USERNAME,
+          password: Config.KAFKA_SASL_PASSWORD,
         },
       };
     }
@@ -103,7 +104,7 @@ export class KafkaBroker implements MessageBroker {
             await handleToppingUpdate(message.value.toString());
             break;
           default:
-            console.log("Doing Nothing");
+            logger.info("Doing Nothing");
             break;
         }
       },
